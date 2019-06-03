@@ -133,10 +133,8 @@ class NbgraderGradingTab:
                     try:
                         point = int(cell['metadata']['nbgrader']['points'])
                     except:
-                        print ("No points in answer")
-
                         point = self.MAX_POINTS_WHEN_NOT_GIVEN
-                    
+
                     try:
                         graded_points = int(cell['metadata']['nbgrader'
                                 ]['graded_points'])
@@ -165,7 +163,6 @@ class NbgraderGradingTab:
         self.exam_solutions = self.exam_solutions.astype(dtype={'points': 'int8',
                 'student_id': 'int8', 'answer_id': 'int8'})
 
-                
 
     def create_rubrics_feedback(self, answer_sample_object,
                                 grade_button):
@@ -203,32 +200,67 @@ class NbgraderGradingTab:
 
         return Box(combined_list, layout=box_layout)
 
+    def next_question(self):
+        pass
+
+    def previous_question(self):
+        pass
+
+    def next_answer(self):
+        exam = self.exam_solutions
+        if not self.sample:
+            df = exam[exam['graded_flag'] == False]
+            if not df.empty:
+                selection = df.iloc[0]  # can be sample also
+            else:
+                selection = None
+        else:
+            previous = self.sample
+            ss = (exam['question'] == previous.question_text) & \
+                    (exam['student_id'] == previous.student + 1)
+            selection = exam[ss].iloc[0]
+        
+        if selection:
+            one_sample = SingleQuestionAnswerFeedbacks(selection)
+        else:
+            self.sample.empty_data()
+            one_sample = self.sample
+        return one_sample
+
+    def previous_answer(self):
+        pass
+
     def get_exam_to_grade(self, direction=None):
         exam = self.exam_solutions
         if not self.sample:
-            selection = exam[exam['graded_flag'] == False].iloc[0]  # can be sample also
-            print ('First sample :', selection.name)
+            df = exam[exam['graded_flag'] == False]
+            selection = df.iloc[0] if not df.empty else None
         else:
-            previous_sample = self.sample
-            iloc_previous_sample = previous_sample.name
-
-        # print (exam[(exam['student_id'] == selection.student+1) & (exam['question'] == selection.question)])
-
-        # print ("previous smaple iloc:", iloc_previous_sample)
+            previous= self.sample
 
             if not direction:
-                selection = exam.iloc[iloc_previous_sample + 1]
+                df = exam[(exam['question'] == previous.question_text) & \
+                        (exam['student_id'] == previous.student + 1)]
+                selection = df.iloc[0] if not df.empty else None
             elif 'next' == direction:
-                print ('next : ', iloc_previous_sample + 1)
-                selection = exam.iloc[iloc_previous_sample + 1]
+                df = exam[(exam['question'] == previous.question_text) & \
+                        (exam['student_id'] == previous.student + 1)]
+                if not df.empty:
+                    selection = df.iloc[0] 
+                else:
+                    df = exam[(exam['question'] == previous.question_text) & \
+                            (exam['student_id'] == 0)]#First student
+                    if not df.empty:
+                        if (df.iloc[0].name + 1) in exam.index:
+                            selection = exam.iloc[df.iloc[0].name + 1]
+                        else:
+                            selection = None
             elif 'previous' == direction:
-                print ('previous : ', iloc_previous_sample - 1)
-                selection = exam.iloc[iloc_previous_sample - 1]
+                pass
             elif 'next_question' == direction:
-                last_solution_of_question = exam[exam['question']
-                        == previous_sample.question_text].iloc[-1]
-                iloc_of_last_solution = last_solution_of_question.name
-                selection = exam.iloc[iloc_previous_sample + 1]
+                df = exam[(exam['question'] == previous.question_text) & \
+                        (exam['student_id'] == previous.student + 1)]
+                selection = df.iloc[0] if not df.empty else None
             elif 'previous_question' == direction:
                 first_solution_of_question = exam[exam['question']
                         == previous_sample.question_text].iloc[1]
@@ -241,7 +273,6 @@ class NbgraderGradingTab:
                 selection = exam.iloc[iloc_previous_sample + 1]
 
         one_sample = SingleQuestionAnswerFeedbacks(selection)
-        print ('selected sample ioc :', one_sample.name)
         return one_sample
 
     def single_question_grading_view(self):

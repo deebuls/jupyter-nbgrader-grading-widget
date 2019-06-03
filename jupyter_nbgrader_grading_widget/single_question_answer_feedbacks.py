@@ -26,6 +26,18 @@ class SingleQuestionAnswerFeedbacks:
             self.feedback_checkbox[checkbox_index] = True #with feedback make it true
             self.feedback[checkbox_index] = fb
 
+    def empty_data(self):
+        self.name = ""
+        self.index = ""
+        self.student = ""
+        self.question_text = "Congratulations grading complete!!"
+        self.answer_text = ""
+        self.points =  ""
+        self.grade =  ""
+        self.feedback_checkbox = [False for i in range(self.points)]
+        self.feedback = ["No feedback" for i in range(self.points)]
+
+
     def update(self, feedback_index, change) -> None:
         """ update method is callback for checkbox widget
 
