@@ -1,0 +1,2 @@
+recursive-include jupyter_nbgrader_grading_widget/static *.*
+include jupyter-nbgrader-grading-widget.json
