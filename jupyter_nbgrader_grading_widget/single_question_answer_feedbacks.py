@@ -43,7 +43,6 @@ class SingleQuestionAnswerFeedbacks:
 
 	updates the grade value bases on checkbox
 	"""
-        print(change)
         self.feedback_checkbox[feedback_index] = change['new']
         if (False == change['old'] and True == change['new']):
             self.grade -= 1

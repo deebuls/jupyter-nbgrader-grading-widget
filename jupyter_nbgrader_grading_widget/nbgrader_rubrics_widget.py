@@ -61,6 +61,37 @@ class NbgraderGradingTab:
         tab.set_title(2, 'Summary')
         display(tab)
 
+    def save_single_jupyter_notebooks(self):
+        update_file_name = ''
+        update_flag = False
+        filenames = sorted(Path(self.nbgrader_folder_path).glob('**/'
+            + self.exam_file_name+'.ipynb'))
+        for student_id, filename in enumerate(filenames):
+            if (student_id == self.sample.student):
+                with open(filename) as f:
+                    data = json.load(f)
+
+                for index,cell in enumerate(data['cells']):
+                    if 'nbgrader' in cell['metadata'] and (cell['metadata'
+                        ]['nbgrader']['solution'])==True :
+                        if (index == self.sample.index):
+                            update_file_name = filename
+                            data['cells'][index]['metadata'
+                                ]['nbgrader']['grade'] = str(self.sample.grade)
+                            data['cells'][index]['metadata'
+                                ]['nbgrader']['graded_flag'] = True
+                            data['cells'][index]['metadata'
+                                ]['nbgrader']['feedback'] = self.sample.feedback
+                            update_flag = True
+                            break
+
+            if update_flag:
+                #break outer loop
+                break
+        if update_flag:
+            with open(update_file_name, "w") as f:
+                json.dump(data, f, indent=4)
+
     def check_folder_structure(self, nbgrader_submitted_folder_path,
                                exam_file_name):
 
@@ -88,14 +119,14 @@ class NbgraderGradingTab:
         ''' parses jupyter notebooks based on some assumptions
 
 
-....|grade | solution | points | cell type|
-....|------|----------|--------|----------|
-....|True  |True      |present |answer  |
-....|True  |False     |present |test    |
-....|False |True      |None    |code    |
-....|False |False     |None    |question|
+        ....|grade | solution | points | cell type|
+        ....|------|----------|--------|----------|
+        ....|True  |True      |present |answer  |
+        ....|True  |False     |present |test    |
+        ....|False |True      |None    |code    |
+        ....|False |False     |None    |question|
 
-....'''
+        '''
 
         lst = []
 
@@ -175,7 +206,7 @@ class NbgraderGradingTab:
         def on_feedback_text_change(name, change):
             answer_sample_object.feedback_update(name, change)
 
-        items_layout = Layout(width='auto')  # override the default width of the button to 'auto' to let the button grow
+        items_layout = Layout(width='auto')
 
         box_layout = Layout(display='flex', flex_flow='column',
                             align_items='stretch')
@@ -269,8 +300,6 @@ class NbgraderGradingTab:
         return one_sample
 
     def single_question_grading_view(self, direction=None):
-        self.parse_jupyter_notebooks(self.nbgrader_folder_path,
-                            self.exam_file_name)
 
         self.sample = self.get_exam_to_grade(direction)
 
@@ -289,8 +318,8 @@ class NbgraderGradingTab:
         answer = widgets.Textarea(value=self.sample.answer_text,
                                   placeholder='Answer missing',
                                   disabled=True,
-                                  layout=Layout(width='50%',
-                                  height='100px',
+                                  layout=Layout(width='60%',
+                                  height='200px',
                                   continuous_update=True))
 
     # TODO Fix this 100px to auto
@@ -318,13 +347,28 @@ class NbgraderGradingTab:
         complete = Box([question, row_1, row_2], layout=col_layout)
 
         def on_save_button(change):
+            self.save_single_jupyter_notebooks()
             self.sample = self.get_exam_to_grade()
             question.value = self.sample.question_text
             answer.value = self.sample.answer_text
+            with feedback:
+                clear_output()
+                fd = self.create_rubrics_feedback(self.sample,
+                        grade_button)
+                display(fd)
             grade_button.value = 'grade : ' + str(self.sample.grade)
 
         def on_zero_button(change):
             self.sample.grade = 0
+            self.save_single_jupyter_notebooks()
+            self.sample = self.get_exam_to_grade()
+            question.value = self.sample.question_text
+            answer.value = self.sample.answer_text
+            with feedback:
+                clear_output()
+                fd = self.create_rubrics_feedback(self.sample,
+                        grade_button)
+                display(fd)
             grade_button.description = 'grade : ' \
                 + str(self.sample.grade)
 
@@ -363,6 +407,17 @@ class NbgraderGradingTab:
         return complete
 
     def dashboard_grading(self):
+        single_question_output = \
+            widgets.Output(description='Single Question')
+        if self.check_folder_structure(self.nbgrader_folder_path,
+            self.exam_file_name):
+            self.parse_jupyter_notebooks(self.nbgrader_folder_path,
+                            self.exam_file_name)
+        else:
+            print ('Please select the proper folder')
+            pass
+
+        clear_output()
         row_layout = Layout(display='Flex', flex_flow='row',
                             align_items='stretch', width='100%')
         col_layout = Layout(display='flex', flex_flow='column',
@@ -374,8 +429,6 @@ class NbgraderGradingTab:
         next_question_button = Button(description='Next Question',
                 layout=Layout(width='50%'))
 
-        single_question_output = \
-            widgets.Output(description='Single Question')
         with single_question_output:
             clear_output()
             question_view = self.single_question_grading_view()
@@ -431,7 +484,6 @@ class NbgraderGradingTab:
                 disabled=False, layout=layout)  # value='/path/to/nbgrader/folder/submission',
         self.nbgrader_folder_path = nbgrader_folder_path.value
         self.exam_file_name = exam_file_name.value
-        
         display(nbgrader_folder_path)
         display(exam_file_name)
 
@@ -449,7 +501,6 @@ class NbgraderGradingTab:
                 if self.check_folder_structure(nbgrader_folder_path.value,
                     exam_file_name.value):
                     button.button_style = 'success'
-                    
                 else:
                     button.button_style = 'danger'
 
